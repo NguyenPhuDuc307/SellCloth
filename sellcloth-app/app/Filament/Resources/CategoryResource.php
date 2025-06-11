@@ -19,22 +19,40 @@ class CategoryResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Danh mục';
+
+    protected static ?string $modelLabel = 'danh mục';
+
+    protected static ?string $pluralModelLabel = 'danh mục';
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->label('Tên danh mục')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(
+                        fn(string $context, $state, Forms\Set $set) =>
+                        $context === 'create' ? $set('slug', \Illuminate\Support\Str::slug($state)) : null
+                    ),
                 Forms\Components\TextInput::make('slug')
+                    ->label('Slug (URL)')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->unique(ignoreRecord: true),
                 Forms\Components\Textarea::make('description')
+                    ->label('Mô tả')
                     ->columnSpanFull(),
                 Forms\Components\FileUpload::make('image')
-                    ->image(),
+                    ->label('Hình ảnh')
+                    ->image()
+                    ->directory('categories'),
                 Forms\Components\Toggle::make('is_active')
-                    ->required(),
+                    ->label('Kích hoạt')
+                    ->default(true),
             ]);
     }
 
@@ -43,30 +61,48 @@ class CategoryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
+                    ->label('Tên danh mục')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('slug')
-                    ->searchable(),
-                Tables\Columns\ImageColumn::make('image'),
+                    ->label('Slug')
+                    ->searchable()
+                    ->toggleable(),
+                Tables\Columns\ImageColumn::make('image')
+                    ->label('Hình ảnh')
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('is_active')
+                    ->label('Trạng thái')
                     ->boolean(),
+                Tables\Columns\TextColumn::make('products_count')
+                    ->label('Số sản phẩm')
+                    ->counts('products')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->label('Ngày tạo')
+                    ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\TernaryFilter::make('is_active')
+                    ->label('Trạng thái')
+                    ->boolean()
+                    ->trueLabel('Đang kích hoạt')
+                    ->falseLabel('Không kích hoạt'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->label('Xem'),
+                Tables\Actions\EditAction::make()
+                    ->label('Sửa'),
+                Tables\Actions\DeleteAction::make()
+                    ->label('Xóa'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->label('Xóa được chọn'),
                 ]),
             ]);
     }
