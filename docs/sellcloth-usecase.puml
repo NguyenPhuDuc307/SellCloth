@@ -1,0 +1,154 @@
+@startuml SellCloth-UseCase
+!theme plain
+title UseCase Diagram - SellCloth E-commerce System
+
+' Actors
+actor "Admin" as Admin
+actor "Khách hàng" as Customer
+actor "Khách vãng lai" as Visitor
+
+' System boundary
+rectangle "SellCloth System" {
+  
+  ' Admin Use Cases
+  package "Admin Management" {
+    usecase "Đăng nhập Admin" as UC_AdminLogin
+    usecase "Quản lý danh mục" as UC_ManageCategories
+    usecase "Thêm danh mục" as UC_AddCategory
+    usecase "Sửa danh mục" as UC_EditCategory
+    usecase "Xóa danh mục" as UC_DeleteCategory
+    usecase "Xem danh sách danh mục" as UC_ViewCategories
+    
+    usecase "Quản lý sản phẩm" as UC_ManageProducts
+    usecase "Thêm sản phẩm" as UC_AddProduct
+    usecase "Sửa sản phẩm" as UC_EditProduct
+    usecase "Xóa sản phẩm" as UC_DeleteProduct
+    usecase "Xem danh sách sản phẩm" as UC_ViewProducts
+    usecase "Quản lý tồn kho" as UC_ManageInventory
+    
+    usecase "Quản lý đơn hàng" as UC_ManageOrders
+    usecase "Xem đơn hàng" as UC_ViewOrders
+    usecase "Cập nhật trạng thái đơn hàng" as UC_UpdateOrderStatus
+    usecase "Xem chi tiết đơn hàng" as UC_ViewOrderDetails
+    
+    usecase "Quản lý người dùng" as UC_ManageUsers
+    usecase "Xem báo cáo thống kê" as UC_ViewReports
+  }
+  
+  ' Customer Use Cases (Future features)
+  package "Customer Features" {
+    usecase "Xem trang chủ" as UC_ViewHomepage
+    usecase "Duyệt sản phẩm theo danh mục" as UC_BrowseByCategory
+    usecase "Xem chi tiết sản phẩm" as UC_ViewProductDetails
+    usecase "Tìm kiếm sản phẩm" as UC_SearchProducts
+    usecase "Thêm vào giỏ hàng" as UC_AddToCart
+    usecase "Xem giỏ hàng" as UC_ViewCart
+    usecase "Cập nhật giỏ hàng" as UC_UpdateCart
+    usecase "Đặt hàng" as UC_PlaceOrder
+    usecase "Xem lịch sử đơn hàng" as UC_ViewOrderHistory
+    usecase "Đăng ký tài khoản" as UC_Register
+    usecase "Đăng nhập" as UC_CustomerLogin
+    usecase "Đăng xuất" as UC_Logout
+  }
+  
+  ' Visitor Use Cases
+  package "Public Access" {
+    usecase "Xem catalog sản phẩm" as UC_ViewCatalog
+    usecase "Xem thông tin sản phẩm" as UC_ViewProductInfo
+    usecase "Liên hệ" as UC_Contact
+  }
+}
+
+' Admin relationships
+Admin --> UC_AdminLogin
+Admin --> UC_ManageCategories
+Admin --> UC_ManageProducts
+Admin --> UC_ManageOrders
+Admin --> UC_ManageUsers
+Admin --> UC_ViewReports
+
+' Category management extends
+UC_ManageCategories ..> UC_AddCategory : extends
+UC_ManageCategories ..> UC_EditCategory : extends
+UC_ManageCategories ..> UC_DeleteCategory : extends
+UC_ManageCategories ..> UC_ViewCategories : extends
+
+' Product management extends
+UC_ManageProducts ..> UC_AddProduct : extends
+UC_ManageProducts ..> UC_EditProduct : extends
+UC_ManageProducts ..> UC_DeleteProduct : extends
+UC_ManageProducts ..> UC_ViewProducts : extends
+UC_ManageProducts ..> UC_ManageInventory : extends
+
+' Order management extends
+UC_ManageOrders ..> UC_ViewOrders : extends
+UC_ManageOrders ..> UC_UpdateOrderStatus : extends
+UC_ManageOrders ..> UC_ViewOrderDetails : extends
+
+' Customer relationships (Future)
+Customer --> UC_ViewHomepage
+Customer --> UC_BrowseByCategory
+Customer --> UC_ViewProductDetails
+Customer --> UC_SearchProducts
+Customer --> UC_AddToCart
+Customer --> UC_ViewCart
+Customer --> UC_UpdateCart
+Customer --> UC_PlaceOrder
+Customer --> UC_ViewOrderHistory
+Customer --> UC_Register
+Customer --> UC_CustomerLogin
+Customer --> UC_Logout
+
+' Visitor relationships
+Visitor --> UC_ViewHomepage
+Visitor --> UC_ViewCatalog
+Visitor --> UC_ViewProductInfo
+Visitor --> UC_BrowseByCategory
+Visitor --> UC_Contact
+Visitor --> UC_Register
+
+' Include relationships
+UC_AddProduct ..> UC_ViewCategories : include
+UC_EditProduct ..> UC_ViewCategories : include
+UC_PlaceOrder ..> UC_ViewCart : include
+UC_ViewOrderHistory ..> UC_CustomerLogin : include
+UC_AddToCart ..> UC_ViewProductDetails : include
+
+' Notes
+note right of UC_ManageCategories
+  Hiện tại: ✅ Hoàn thành
+  - CRUD operations working
+  - Vietnamese interface
+  - Auto-slug generation
+end note
+
+note right of UC_ManageProducts
+  Hiện tại: ✅ Hoàn thành
+  - Full product management
+  - Size/Color variants (JSON)
+  - Stock management
+  - Category relationships
+end note
+
+note right of UC_ManageOrders
+  Hiện tại: ✅ Hoàn thành
+  - Order CRUD operations
+  - Status management
+  - Customer info embedded
+end note
+
+note right of UC_ViewHomepage
+  Tương lai: 🚧 Cần phát triển
+  - Public website
+  - Product showcase
+  - Category navigation
+end note
+
+note right of UC_PlaceOrder
+  Tương lai: 🚧 Cần phát triển
+  - Shopping cart system
+  - Checkout process
+  - Payment integration
+end note
+
+@enduml

@@ -1,0 +1,160 @@
+@startuml SellCloth-Frontend-Shopping-Sequence
+!theme plain
+title Sequence Diagram - Frontend Shopping Experience (Future Phase)
+
+actor "Customer" as Customer
+participant "Browser" as Browser
+participant "Laravel\nRouter" as Router
+participant "Product\nController" as ProductController
+participant "Cart\nController" as CartController
+participant "Order\nController" as OrderController
+participant "Category\nModel" as CategoryModel
+participant "Product\nModel" as ProductModel
+participant "Order\nModel" as OrderModel
+participant "Database" as DB
+
+== Duyệt sản phẩm theo danh mục ==
+Customer -> Browser: Truy cập trang chủ
+Browser -> Router: GET /
+Router -> ProductController: index()
+ProductController -> CategoryModel: Category::with('products')->get()
+CategoryModel -> DB: Query categories và featured products
+DB -> CategoryModel: Return category data
+CategoryModel -> ProductController: Categories với products
+ProductController -> Browser: Render homepage
+Browser -> Customer: Hiển thị trang chủ với categories
+
+Customer -> Browser: Click danh mục "Áo nam"
+Browser -> Router: GET /danh-muc/ao-nam
+Router -> ProductController: category($slug)
+ProductController -> CategoryModel: Category::where('slug', 'ao-nam')->first()
+CategoryModel -> DB: Query category
+DB -> CategoryModel: Category data
+CategoryModel -> ProductController: Category object
+ProductController -> ProductModel: Product::where('category_id', $id)->paginate()
+ProductModel -> DB: Query products in category
+DB -> ProductModel: Paginated products
+ProductModel -> ProductController: Product collection
+ProductController -> Browser: Render category page
+Browser -> Customer: Hiển thị sản phẩm trong danh mục
+
+== Xem chi tiết sản phẩm ==
+Customer -> Browser: Click sản phẩm "Áo thun nam cổ tròn"
+Browser -> Router: GET /san-pham/ao-thun-nam-co-tron
+Router -> ProductController: show($slug)
+ProductController -> ProductModel: Product::where('slug', $slug)->with('category')->first()
+ProductModel -> DB: Query product với category
+DB -> ProductModel: Product data với category
+ProductModel -> ProductController: Product object
+ProductController -> Browser: Render product detail page
+Browser -> Customer: Hiển thị chi tiết sản phẩm
+
+note right of Customer
+  Product detail features:
+  - Hình ảnh sản phẩm
+  - Thông tin chi tiết
+  - Chọn size, màu sắc
+  - Số lượng
+  - Giá và khuyến mãi
+  - Nút "Thêm vào giỏ"
+end note
+
+== Thêm vào giỏ hàng ==
+Customer -> Browser: Chọn size "L", color "Đen", quantity "2"
+Browser -> Browser: Validate selection
+Customer -> Browser: Click "Thêm vào giỏ"
+Browser -> Router: POST /gio-hang/them
+Router -> CartController: addToCart(Request $request)
+CartController -> CartController: Validate product options
+
+note right of CartController
+  Session-based cart:
+  - Không cần login
+  - Lưu trong session
+  - Validate stock availability
+  - Calculate total
+end note
+
+CartController -> ProductModel: Product::find($productId)
+ProductModel -> DB: Query product
+DB -> ProductModel: Product data
+ProductModel -> CartController: Product object
+CartController -> CartController: session()->push('cart', $cartItem)
+CartController -> Browser: JSON response (success)
+Browser -> Customer: Thông báo thêm thành công
+
+== Xem giỏ hàng ==
+Customer -> Browser: Click icon giỏ hàng
+Browser -> Router: GET /gio-hang
+Router -> CartController: viewCart()
+CartController -> CartController: session()->get('cart', [])
+CartController -> ProductModel: Product::whereIn('id', $productIds)
+ProductModel -> DB: Query products in cart
+DB -> ProductModel: Products data
+ProductModel -> CartController: Product collection
+CartController -> Browser: Render cart page
+Browser -> Customer: Hiển thị giỏ hàng
+
+note right of Customer
+  Cart features:
+  - Danh sách sản phẩm
+  - Chỉnh sửa số lượng
+  - Xóa sản phẩm
+  - Tính tổng tiền
+  - Nút "Thanh toán"
+end note
+
+== Thanh toán đơn hàng ==
+Customer -> Browser: Click "Thanh toán"
+Browser -> Router: GET /thanh-toan
+Router -> OrderController: checkout()
+OrderController -> CartController: getCartItems()
+CartController -> OrderController: Cart data
+OrderController -> Browser: Render checkout form
+Browser -> Customer: Hiển thị form thông tin
+
+Customer -> Browser: Điền thông tin khách hàng
+note right of Customer
+  Checkout form:
+  - Họ tên
+  - Email
+  - Số điện thoại
+  - Địa chỉ giao hàng
+  - Ghi chú
+  - Phương thức thanh toán
+end note
+
+Customer -> Browser: Submit đơn hàng
+Browser -> Router: POST /dat-hang
+Router -> OrderController: placeOrder(Request $request)
+OrderController -> OrderController: Validate order data
+
+OrderController -> OrderModel: Order::create($orderData)
+OrderModel -> DB: INSERT INTO orders
+DB -> OrderModel: Order created với auto order_number
+OrderModel -> OrderController: Order object
+
+loop Cho từng item trong cart
+    OrderController -> OrderController: OrderItem::create($itemData)
+    OrderController -> DB: INSERT INTO order_items
+    DB -> OrderController: OrderItem created
+end
+
+OrderController -> CartController: clearCart()
+CartController -> CartController: session()->forget('cart')
+CartController -> OrderController: Cart cleared
+
+OrderController -> OrderController: Send confirmation email (future)
+OrderController -> Browser: Redirect với success message
+Browser -> Customer: Thông báo đặt hàng thành công
+
+note right of OrderController
+  Order created with:
+  - Unique order number
+  - Customer information
+  - Order items với product snapshot
+  - Status: pending
+  - Payment status: pending
+end note
+
+@enduml

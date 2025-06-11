@@ -1,0 +1,186 @@
+@startuml SellCloth-Admin-Detailed-UseCase
+!theme plain
+title Chi tiết UseCase - Admin Management System
+
+' Actor
+actor "Admin" as Admin
+
+' System
+rectangle "Filament Admin Panel" {
+  
+  package "Authentication" {
+    usecase "Đăng nhập hệ thống" as UC_Login
+    usecase "Xác thực thông tin" as UC_Authenticate
+    usecase "Đăng xuất" as UC_Logout
+  }
+  
+  package "Dashboard" {
+    usecase "Xem tổng quan hệ thống" as UC_ViewDashboard
+    usecase "Xem thống kê bán hàng" as UC_ViewSalesStats
+    usecase "Xem sản phẩm tồn kho thấp" as UC_ViewLowStock
+    usecase "Xem đơn hàng mới" as UC_ViewNewOrders
+  }
+  
+  package "Category Management" {
+    usecase "Xem danh sách danh mục" as UC_ListCategories
+    usecase "Tạo danh mục mới" as UC_CreateCategory
+    usecase "Sửa thông tin danh mục" as UC_EditCategory
+    usecase "Xóa danh mục" as UC_DeleteCategory
+    usecase "Tìm kiếm danh mục" as UC_SearchCategories
+    usecase "Lọc danh mục theo trạng thái" as UC_FilterCategories
+    usecase "Tự động tạo slug" as UC_AutoGenerateSlug
+    usecase "Upload hình ảnh danh mục" as UC_UploadCategoryImage
+  }
+  
+  package "Product Management" {
+    usecase "Xem danh sách sản phẩm" as UC_ListProducts
+    usecase "Tạo sản phẩm mới" as UC_CreateProduct
+    usecase "Sửa thông tin sản phẩm" as UC_EditProduct
+    usecase "Xóa sản phẩm" as UC_DeleteProduct
+    usecase "Tìm kiếm sản phẩm" as UC_SearchProducts
+    usecase "Lọc sản phẩm theo danh mục" as UC_FilterByCategory
+    usecase "Lọc sản phẩm theo trạng thái" as UC_FilterByStatus
+    usecase "Quản lý biến thể (Size/Color)" as UC_ManageVariants
+    usecase "Cập nhật số lượng tồn kho" as UC_UpdateStock
+    usecase "Đặt sản phẩm nổi bật" as UC_SetFeatured
+    usecase "Upload nhiều hình ảnh" as UC_UploadProductImages
+    usecase "Quản lý giá và giá khuyến mãi" as UC_ManagePricing
+  }
+  
+  package "Order Management" {
+    usecase "Xem danh sách đơn hàng" as UC_ListOrders
+    usecase "Xem chi tiết đơn hàng" as UC_ViewOrderDetails
+    usecase "Cập nhật trạng thái đơn hàng" as UC_UpdateOrderStatus
+    usecase "Cập nhật trạng thái thanh toán" as UC_UpdatePaymentStatus
+    usecase "Tìm kiếm đơn hàng" as UC_SearchOrders
+    usecase "Lọc đơn hàng theo trạng thái" as UC_FilterByOrderStatus
+    usecase "Lọc đơn hàng theo ngày" as UC_FilterByDate
+    usecase "Tạo đơn hàng thủ công" as UC_CreateManualOrder
+    usecase "In hóa đơn" as UC_PrintInvoice
+    usecase "Gửi email xác nhận" as UC_SendConfirmationEmail
+  }
+  
+  package "User Management" {
+    usecase "Xem danh sách người dùng" as UC_ListUsers
+    usecase "Tạo tài khoản admin mới" as UC_CreateAdminUser
+    usecase "Sửa thông tin người dùng" as UC_EditUser
+    usecase "Vô hiệu hóa tài khoản" as UC_DeactivateUser
+    usecase "Phân quyền người dùng" as UC_ManagePermissions
+  }
+  
+  package "Reports & Analytics" {
+    usecase "Xem báo cáo doanh thu" as UC_ViewRevenueReport
+    usecase "Xem báo cáo sản phẩm bán chạy" as UC_ViewBestSellerReport
+    usecase "Xem báo cáo tồn kho" as UC_ViewInventoryReport
+    usecase "Xuất báo cáo Excel" as UC_ExportReports
+    usecase "Thiết lập thời gian báo cáo" as UC_SetReportPeriod
+  }
+}
+
+' Admin relationships
+Admin --> UC_Login
+Admin --> UC_ViewDashboard
+Admin --> UC_ListCategories
+Admin --> UC_ListProducts
+Admin --> UC_ListOrders
+Admin --> UC_ListUsers
+Admin --> UC_ViewRevenueReport
+Admin --> UC_Logout
+
+' Authentication flow
+UC_Login ..> UC_Authenticate : include
+UC_Authenticate ..> UC_ViewDashboard : success
+
+' Dashboard includes
+UC_ViewDashboard ..> UC_ViewSalesStats : include
+UC_ViewDashboard ..> UC_ViewLowStock : include
+UC_ViewDashboard ..> UC_ViewNewOrders : include
+
+' Category management extends
+UC_ListCategories <|-- UC_CreateCategory : extends
+UC_ListCategories <|-- UC_EditCategory : extends
+UC_ListCategories <|-- UC_DeleteCategory : extends
+UC_ListCategories <|-- UC_SearchCategories : extends
+UC_ListCategories <|-- UC_FilterCategories : extends
+
+UC_CreateCategory ..> UC_AutoGenerateSlug : include
+UC_CreateCategory ..> UC_UploadCategoryImage : include
+UC_EditCategory ..> UC_UploadCategoryImage : include
+
+' Product management extends
+UC_ListProducts <|-- UC_CreateProduct : extends
+UC_ListProducts <|-- UC_EditProduct : extends
+UC_ListProducts <|-- UC_DeleteProduct : extends
+UC_ListProducts <|-- UC_SearchProducts : extends
+UC_ListProducts <|-- UC_FilterByCategory : extends
+UC_ListProducts <|-- UC_FilterByStatus : extends
+
+UC_CreateProduct ..> UC_ManageVariants : include
+UC_CreateProduct ..> UC_ManagePricing : include
+UC_CreateProduct ..> UC_UploadProductImages : include
+UC_CreateProduct ..> UC_AutoGenerateSlug : include
+
+UC_EditProduct ..> UC_ManageVariants : include
+UC_EditProduct ..> UC_ManagePricing : include
+UC_EditProduct ..> UC_UpdateStock : include
+UC_EditProduct ..> UC_SetFeatured : include
+UC_EditProduct ..> UC_UploadProductImages : include
+
+' Order management extends
+UC_ListOrders <|-- UC_ViewOrderDetails : extends
+UC_ListOrders <|-- UC_UpdateOrderStatus : extends
+UC_ListOrders <|-- UC_UpdatePaymentStatus : extends
+UC_ListOrders <|-- UC_SearchOrders : extends
+UC_ListOrders <|-- UC_FilterByOrderStatus : extends
+UC_ListOrders <|-- UC_FilterByDate : extends
+UC_ListOrders <|-- UC_CreateManualOrder : extends
+
+UC_ViewOrderDetails ..> UC_PrintInvoice : include
+UC_UpdateOrderStatus ..> UC_SendConfirmationEmail : include
+
+' User management extends
+UC_ListUsers <|-- UC_CreateAdminUser : extends
+UC_ListUsers <|-- UC_EditUser : extends
+UC_ListUsers <|-- UC_DeactivateUser : extends
+UC_ListUsers <|-- UC_ManagePermissions : extends
+
+' Reports extends
+UC_ViewRevenueReport <|-- UC_ExportReports : extends
+UC_ViewRevenueReport <|-- UC_SetReportPeriod : extends
+UC_ViewBestSellerReport <|-- UC_ExportReports : extends
+UC_ViewInventoryReport <|-- UC_ExportReports : extends
+
+' Status notes
+note right of UC_ListCategories
+  Status: ✅ IMPLEMENTED
+  - Vietnamese interface
+  - Auto-slug generation
+  - Image upload ready
+  - Filters working
+end note
+
+note right of UC_ListProducts
+  Status: ✅ IMPLEMENTED
+  - Full CRUD operations
+  - JSON variants (sizes/colors)
+  - Category relationships
+  - Stock management
+  - Featured products
+end note
+
+note right of UC_ListOrders
+  Status: ✅ IMPLEMENTED
+  - Basic CRUD operations
+  - Status management
+  - Order number auto-generation
+  - Customer info embedded
+end note
+
+note right of UC_ViewRevenueReport
+  Status: 🚧 FUTURE
+  - Dashboard widgets
+  - Analytics integration
+  - Export functionality
+end note
+
+@enduml

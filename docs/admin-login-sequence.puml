@@ -1,0 +1,40 @@
+@startuml SellCloth-Admin-Login-Sequence
+!theme plain
+title Sequence Diagram - Admin Login Workflow
+
+actor "Admin" as Admin
+participant "Browser" as Browser
+participant "Laravel App" as App
+participant "Filament" as Filament
+participant "Database" as DB
+
+Admin -> Browser: Truy cập /admin
+Browser -> App: GET /admin
+App -> Filament: Check authentication
+Filament -> App: Redirect to login
+App -> Browser: 302 Redirect /admin/login
+Browser -> Admin: Hiển thị login form
+
+note right of Admin
+  Credentials:
+  Email: admin@sellcloth.com
+  Password: password123
+end note
+
+Admin -> Browser: Nhập thông tin đăng nhập
+Browser -> App: POST /admin/login
+App -> Filament: Validate credentials
+Filament -> DB: Query users table
+DB -> Filament: Return user data
+Filament -> Filament: Check password hash
+Filament -> App: Authentication successful
+App -> Browser: 302 Redirect /admin
+Browser -> Admin: Hiển thị admin dashboard
+
+note right of Filament
+  Session được tạo
+  User authenticated
+  Redirect to dashboard
+end note
+
+@enduml

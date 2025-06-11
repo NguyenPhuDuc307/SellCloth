@@ -1,0 +1,199 @@
+@startuml SellCloth-Order-Processing-Sequence
+!theme plain
+title Sequence Diagram - Order Processing Workflow
+
+actor "Admin" as Admin
+participant "Browser" as Browser
+participant "Filament\nOrderResource" as OrderResource
+participant "Order\nModel" as OrderModel
+participant "OrderItem\nModel" as OrderItemModel
+participant "Product\nModel" as ProductModel
+participant "Database" as DB
+
+== Xem danh sách đơn hàng ==
+Admin -> Browser: Click "Đơn hàng"
+Browser -> OrderResource: GET /admin/orders
+OrderResource -> OrderModel: Order::with('orderItems.product')->get()
+OrderModel -> DB: Complex query với relationships
+note right of DB
+  Query:
+  SELECT orders.*, 
+         order_items.*,
+         products.name as product_name
+  FROM orders
+  LEFT JOIN order_items ON orders.id = order_items.order_id
+  LEFT JOIN products ON order_items.product_id = products.id
+end note
+
+DB -> OrderModel: Orders với OrderItems và Products
+OrderModel -> OrderResource: Order collection với relationships
+OrderResource -> Browser: Render orders table
+Browser -> Admin: Hiển thị danh sách đơn hàng
+
+note right of OrderResource
+  Table columns:
+  - Order Number (searchable)
+  - Customer Name
+  - Total Amount (VND)
+  - Status (badge)
+  - Payment Status (badge)
+  - Order Date
+end note
+
+== Xem chi tiết đơn hàng ==
+Admin -> Browser: Click "Xem" trên đơn hàng
+Browser -> OrderResource: GET /admin/orders/{id}
+OrderResource -> OrderModel: Order::with('orderItems.product')->find($id)
+OrderModel -> DB: Query order với full relationships
+DB -> OrderModel: Complete order data
+OrderModel -> OrderResource: Order với OrderItems và Products
+OrderResource -> Browser: Render order details view
+Browser -> Admin: Hiển thị thông tin chi tiết
+
+note right of Admin
+  Order Details Display:
+  - Order Information
+  - Customer Information  
+  - Shipping Address
+  - Order Items với:
+    * Product name & image
+    * Selected size & color
+    * Quantity & price
+    * Total per item
+  - Order Summary
+  - Status History
+end note
+
+== Cập nhật trạng thái đơn hàng ==
+Admin -> Browser: Thay đổi status từ "pending" thành "processing"
+Browser -> OrderResource: PUT /admin/orders/{id}
+OrderResource -> OrderResource: Validate status transition
+note right of OrderResource
+  Valid transitions:
+  pending -> processing
+  pending -> cancelled
+  processing -> shipped
+  processing -> cancelled
+  shipped -> delivered
+end note
+
+OrderResource -> OrderModel: Order::find($id)->update(['status' => 'processing'])
+OrderModel -> DB: UPDATE orders SET status = 'processing'
+DB -> OrderModel: Confirm update
+OrderModel -> OrderResource: Updated order
+OrderResource -> OrderResource: Trigger status change event
+
+alt Email notification enabled
+    OrderResource -> OrderResource: Send status change email
+    note right of OrderResource
+      Email to customer:
+      "Đơn hàng #{order_number} 
+      đang được xử lý"
+    end note
+end
+
+OrderResource -> Browser: Success notification
+Browser -> Admin: "Trạng thái đơn hàng đã được cập nhật"
+
+== Tạo đơn hàng thủ công (Manual Order) ==
+Admin -> Browser: Click "Tạo đơn hàng mới"
+Browser -> OrderResource: GET /admin/orders/create
+OrderResource -> ProductModel: Product::where('is_active', true)->get()
+ProductModel -> DB: SELECT active products
+DB -> ProductModel: Available products
+ProductModel -> OrderResource: Product options
+OrderResource -> Browser: Render create order form
+Browser -> Admin: Hiển thị form tạo đơn hàng
+
+Admin -> Browser: Điền thông tin khách hàng
+note right of Admin
+  Customer Info:
+  - Tên khách hàng
+  - Email  
+  - Số điện thoại
+  - Địa chỉ giao hàng
+  - Ghi chú
+end note
+
+Admin -> Browser: Thêm sản phẩm vào đơn hàng
+Browser -> OrderResource: Select product và variants
+OrderResource -> ProductModel: Get product details & current price
+ProductModel -> DB: SELECT product info
+DB -> ProductModel: Product với price info
+ProductModel -> OrderResource: Product data
+OrderResource -> Browser: Update form với product info
+Browser -> Admin: Hiển thị thông tin sản phẩm đã chọn
+
+Admin -> Browser: Submit form
+Browser -> OrderResource: POST /admin/orders
+OrderResource -> OrderResource: Generate order number
+note right of OrderResource
+  Order number format:
+  ORD-YYYYMMDD-XXXX
+  Example: ORD-20250611-0001
+end note
+
+OrderResource -> OrderModel: Order::create($orderData)
+OrderModel -> DB: INSERT INTO orders
+DB -> OrderModel: Created order với ID
+OrderModel -> OrderResource: New order instance
+
+loop for each order item
+    OrderResource -> OrderItemModel: OrderItem::create($itemData)
+    note right of OrderItemModel
+      OrderItem data:
+      - order_id
+      - product_id  
+      - product_name (snapshot)
+      - product_price (snapshot)
+      - quantity
+      - size, color
+      - total_price
+    end note
+    OrderItemModel -> DB: INSERT INTO order_items
+    DB -> OrderItemModel: Created order item
+end
+
+OrderResource -> OrderResource: Calculate total amount
+OrderResource -> OrderModel: Update order total
+OrderModel -> DB: UPDATE orders SET total_amount = ?
+DB -> OrderModel: Confirm total update
+OrderModel -> OrderResource: Order với correct total
+OrderResource -> Browser: 302 Redirect to order details
+Browser -> Admin: "Đơn hàng đã được tạo thành công"
+
+== Lọc đơn hàng ==
+Admin -> Browser: Filter by status "processing"
+Browser -> OrderResource: GET /admin/orders?filters[status]=processing
+OrderResource -> OrderModel: Order::where('status', 'processing')->get()
+OrderModel -> DB: SELECT * FROM orders WHERE status = 'processing'
+DB -> OrderModel: Filtered orders
+OrderModel -> OrderResource: Filtered collection
+OrderResource -> Browser: Update table
+Browser -> Admin: Chỉ hiển thị đơn hàng đang xử lý
+
+Admin -> Browser: Filter by date range
+Browser -> OrderResource: GET /admin/orders?filters[date_from]=2025-06-01&date_to=2025-06-11
+OrderResource -> OrderModel: Order::whereBetween('created_at', [$from, $to])
+OrderModel -> DB: SELECT * WHERE created_at BETWEEN ? AND ?
+DB -> OrderModel: Date-filtered orders
+OrderModel -> OrderResource: Filtered by date
+OrderResource -> Browser: Update table với date range
+Browser -> Admin: Đơn hàng trong khoảng thời gian đã chọn
+
+note right of OrderResource
+  Order Management Features:
+  ✅ Comprehensive order details
+  ✅ Status workflow management
+  ✅ Manual order creation
+  ✅ Order item relationships
+  ✅ Price snapshot preservation
+  ✅ Auto order numbering
+  ✅ Advanced filtering
+  ✅ Vietnamese interface
+  🚧 Email notifications
+  🚧 Inventory updates
+  🚧 Payment processing
+end note
+
+@enduml

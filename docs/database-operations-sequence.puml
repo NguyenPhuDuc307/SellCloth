@@ -1,0 +1,193 @@
+@startuml SellCloth-Database-Operations-Sequence
+!theme plain
+title Sequence Diagram - Database Operations và Business Logic
+
+participant "Filament\nResource" as Filament
+participant "Eloquent\nModel" as Model
+participant "Database\nConnection" as DB
+participant "Migration\nSystem" as Migration
+participant "Seeder\nSystem" as Seeder
+
+== Database Schema Setup ==
+Migration -> DB: Schema::create('categories')
+note right of DB
+  Categories table:
+  - id (Primary Key)
+  - name (Vietnamese)
+  - slug (SEO friendly)
+  - description
+  - image_path
+  - is_active
+  - timestamps
+end note
+
+Migration -> DB: Schema::create('products')
+note right of DB
+  Products table:
+  - id (Primary Key) 
+  - name (Vietnamese)
+  - slug (auto-generated)
+  - description
+  - price, sale_price
+  - stock_quantity
+  - images (JSON array)
+  - sizes (JSON array)
+  - colors (JSON array)
+  - category_id (Foreign Key)
+  - is_active, is_featured
+  - timestamps
+end note
+
+Migration -> DB: Schema::create('orders')
+note right of DB
+  Orders table:
+  - id (Primary Key)
+  - order_number (unique)
+  - customer_name
+  - customer_email
+  - customer_phone
+  - shipping_address
+  - total_amount
+  - status enum
+  - payment_status enum
+  - notes
+  - timestamps
+end note
+
+Migration -> DB: Schema::create('order_items')
+note right of DB
+  Order Items table:
+  - id (Primary Key)
+  - order_id (Foreign Key)
+  - product_id (Foreign Key)
+  - product_name (snapshot)
+  - product_price (snapshot)
+  - quantity
+  - size, color
+  - subtotal
+  - timestamps
+end note
+
+== Model Relationships Setup ==
+Model -> Model: Category hasMany Products
+Model -> Model: Product belongsTo Category
+Model -> Model: Product hasMany OrderItems
+Model -> Model: Order hasMany OrderItems
+Model -> Model: OrderItem belongsTo Order
+Model -> Model: OrderItem belongsTo Product
+
+== Sample Data Generation ==
+Seeder -> Model: CategorySeeder::run()
+Model -> DB: INSERT categories (Áo nam, Áo nữ, etc.)
+DB -> Model: Categories created
+
+Seeder -> Model: ProductSeeder::run()
+loop Cho từng category
+    Model -> DB: INSERT products với JSON data
+    note right of DB
+      JSON fields:
+      sizes: ["S", "M", "L", "XL"]
+      colors: ["Đen", "Trắng", "Xám"]
+      images: [paths to images]
+    end note
+    DB -> Model: Products created
+end
+
+Seeder -> Model: OrderSeeder::run()
+Model -> DB: INSERT sample orders
+loop Cho từng order
+    Model -> DB: INSERT order_items
+    DB -> Model: Order và OrderItems created
+end
+
+== CRUD Operations via Filament ==
+
+=== Create Operations ===
+Filament -> Model: Category::create($data)
+Model -> Model: Auto-generate slug từ Vietnamese name
+Model -> DB: INSERT INTO categories
+DB -> Model: Return created category
+Model -> Filament: Category object
+
+Filament -> Model: Product::create($data)
+Model -> Model: Cast JSON fields (sizes, colors, images)
+Model -> Model: Validate foreign key (category_id)
+Model -> DB: INSERT INTO products với JSON data
+DB -> Model: Return created product
+Model -> Filament: Product object
+
+=== Read Operations ===
+Filament -> Model: Category::with('products')->get()
+Model -> DB: JOIN categories với products
+DB -> Model: Categories với product relationships
+Model -> Filament: Eager loaded data
+
+Filament -> Model: Product::with('category')->paginate(15)
+Model -> DB: JOIN products với categories, LIMIT 15
+DB -> Model: Paginated products với category data
+Model -> Filament: Paginated collection
+
+Filament -> Model: Order::with('orderItems.product')->get()
+Model -> DB: Complex JOIN với multiple relationships
+note right of DB
+  Query:
+  SELECT orders.*, 
+         order_items.*, 
+         products.name
+  FROM orders 
+  LEFT JOIN order_items ON orders.id = order_items.order_id
+  LEFT JOIN products ON order_items.product_id = products.id
+end note
+DB -> Model: Complete order data
+Model -> Filament: Orders với nested relationships
+
+=== Update Operations ===
+Filament -> Model: Category::find($id)->update($data)
+Model -> Model: Re-generate slug if name changed
+Model -> DB: UPDATE categories SET ... WHERE id = ?
+DB -> Model: Rows affected
+Model -> Filament: Update success
+
+Filament -> Model: Product::find($id)->update($data)
+Model -> Model: Cast và validate JSON fields
+Model -> Model: Check category_id exists
+Model -> DB: UPDATE products SET ... WHERE id = ?
+DB -> Model: Rows affected
+Model -> Filament: Update success
+
+Filament -> Model: Order::find($id)->update(['status' => 'shipped'])
+Model -> DB: UPDATE orders SET status = 'shipped' WHERE id = ?
+DB -> Model: Status updated
+Model -> Filament: Update success
+
+=== Delete Operations ===
+Filament -> Model: Category::find($id)->delete()
+Model -> Model: Check for related products
+Model -> DB: DELETE FROM categories WHERE id = ? (CASCADE)
+note right of DB
+  Foreign key constraint:
+  Related products will be deleted
+  or update will fail if products exist
+end note
+DB -> Model: Delete successful
+Model -> Filament: Deletion confirmed
+
+== Data Integrity và Validation ==
+Model -> Model: Validate unique constraints (slug)
+Model -> Model: Validate required fields
+Model -> Model: Cast JSON fields to arrays
+Model -> Model: Check foreign key constraints
+Model -> DB: Execute với proper constraints
+DB -> Model: Success hoặc constraint violation
+Model -> Filament: Validation results
+
+note right of Model
+  Business rules enforced:
+  - Category slug uniqueness
+  - Product price >= 0
+  - Order total calculation
+  - Stock quantity tracking
+  - JSON field structure
+end note
+
+@enduml

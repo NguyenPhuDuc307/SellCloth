@@ -1,0 +1,138 @@
+@startuml SellCloth-Category-Management-Sequence
+!theme plain
+title Sequence Diagram - Category Management với Auto-Slug Generation
+
+actor "Admin" as Admin
+participant "Browser" as Browser
+participant "Filament\nCategoryResource" as CategoryResource
+participant "Category\nModel" as CategoryModel
+participant "Database" as DB
+
+== Tạo danh mục mới với Auto-Slug ==
+Admin -> Browser: Click "Tạo mới" trong Categories
+Browser -> CategoryResource: GET /admin/categories/create
+CategoryResource -> Browser: Render form tạo danh mục
+Browser -> Admin: Hiển thị form với các field
+
+note right of Admin
+  Form fields:
+  - Tên danh mục (Vietnamese)
+  - Slug (auto-generated)
+  - Mô tả
+  - Hình ảnh
+  - Trạng thái kích hoạt
+end note
+
+Admin -> Browser: Nhập "Áo khoác nam"
+Browser -> CategoryResource: onBlur event (live update)
+CategoryResource -> CategoryResource: Str::slug("Áo khoác nam")
+CategoryResource -> Browser: Update slug field = "ao-khoac-nam"
+Browser -> Admin: Slug field tự động điền
+
+Admin -> Browser: Hoàn thành form và submit
+Browser -> CategoryResource: POST /admin/categories
+
+CategoryResource -> CategoryResource: Validate form data
+note right of CategoryResource
+  Validation rules:
+  - Name: required, max:255
+  - Slug: required, unique, max:255
+  - Description: optional
+  - Image: optional, image file
+  - Is_active: boolean
+end note
+
+CategoryResource -> CategoryModel: Category::create($validatedData)
+CategoryModel -> DB: INSERT INTO categories
+note right of DB
+  Data inserted:
+  name: "Áo khoác nam"
+  slug: "ao-khoac-nam"
+  description: "..."
+  is_active: true
+  created_at: now()
+end note
+
+DB -> CategoryModel: Return created category
+CategoryModel -> CategoryResource: New category instance
+CategoryResource -> Browser: 302 Redirect với success notification
+Browser -> Admin: "Danh mục đã được tạo thành công"
+
+== Xem danh sách với Product Count ==
+Admin -> Browser: Xem danh sách categories
+Browser -> CategoryResource: GET /admin/categories
+CategoryResource -> CategoryModel: Category::withCount('products')->get()
+CategoryModel -> DB: SELECT categories.*, COUNT(products.id) as products_count
+DB -> CategoryModel: Categories với product count
+CategoryModel -> CategoryResource: Category collection với counts
+CategoryResource -> Browser: Render table với product counts
+Browser -> Admin: Hiển thị bảng categories với số sản phẩm
+
+note right of CategoryResource
+  Table columns:
+  ✅ Tên danh mục (searchable)
+  ✅ Slug (toggleable)
+  ✅ Hình ảnh (image column)
+  ✅ Trạng thái (boolean icon)
+  ✅ Số sản phẩm (count badge)
+  ✅ Ngày tạo (date formatted)
+end note
+
+== Sửa danh mục ==
+Admin -> Browser: Click "Sửa" trên danh mục
+Browser -> CategoryResource: GET /admin/categories/{id}/edit
+CategoryResource -> CategoryModel: Category::find($id)
+CategoryModel -> DB: SELECT * FROM categories WHERE id = ?
+DB -> CategoryModel: Return category data
+CategoryModel -> CategoryResource: Category instance
+CategoryResource -> Browser: Render edit form với dữ liệu có sẵn
+Browser -> Admin: Form đã điền sẵn thông tin
+
+Admin -> Browser: Thay đổi tên từ "Áo khoác nam" thành "Áo khoác & Vest nam"
+Browser -> CategoryResource: onBlur event
+CategoryResource -> CategoryResource: Generate new slug: "ao-khoac-vest-nam"
+CategoryResource -> CategoryResource: Check slug uniqueness (ignore current record)
+CategoryResource -> Browser: Update slug field
+Browser -> Admin: Slug được cập nhật tự động
+
+Admin -> Browser: Submit form
+Browser -> CategoryResource: PUT /admin/categories/{id}
+CategoryResource -> CategoryResource: Validate (unique slug ignoring current)
+CategoryResource -> CategoryModel: Category::find($id)->update($data)
+CategoryModel -> DB: UPDATE categories SET name=?, slug=? WHERE id=?
+DB -> CategoryModel: Confirm update
+CategoryModel -> CategoryResource: Updated category
+CategoryResource -> Browser: Redirect với success message
+Browser -> Admin: "Danh mục đã được cập nhật"
+
+== Lọc và tìm kiếm ==
+Admin -> Browser: Sử dụng filter "Trạng thái"
+Browser -> CategoryResource: GET /admin/categories?filters[is_active]=1
+CategoryResource -> CategoryModel: Category::where('is_active', true)->get()
+CategoryModel -> DB: SELECT * FROM categories WHERE is_active = 1
+DB -> CategoryModel: Filtered categories
+CategoryModel -> CategoryResource: Filtered collection
+CategoryResource -> Browser: Update table với filtered data
+Browser -> Admin: Chỉ hiển thị categories đang kích hoạt
+
+Admin -> Browser: Tìm kiếm "áo"
+Browser -> CategoryResource: GET /admin/categories?search=áo
+CategoryResource -> CategoryModel: Category::where('name', 'like', '%áo%')->get()
+CategoryModel -> DB: SELECT * WHERE name LIKE '%áo%'
+DB -> CategoryModel: Matching categories
+CategoryModel -> CategoryResource: Search results
+CategoryResource -> Browser: Update table với search results
+Browser -> Admin: Hiển thị categories có chứa "áo"
+
+note right of CategoryResource
+  Advanced Features:
+  ✅ Real-time slug generation
+  ✅ Unique validation with ignore
+  ✅ Relationship counting
+  ✅ Advanced filtering
+  ✅ Search functionality
+  ✅ Image upload ready
+  ✅ Vietnamese interface
+end note
+
+@enduml

@@ -1,0 +1,212 @@
+@startuml SellCloth-Customer-UseCase
+!theme plain
+title UseCase Diagram - Customer Shopping Experience (Future Development)
+
+' Actors
+actor "Khách vãng lai" as Visitor
+actor "Khách hàng đã đăng ký" as Customer
+
+' System boundary
+rectangle "SellCloth Public Website" {
+  
+  package "Public Access (No Login Required)" {
+    usecase "Xem trang chủ" as UC_ViewHomepage
+    usecase "Duyệt danh mục sản phẩm" as UC_BrowseCategories
+    usecase "Xem danh sách sản phẩm" as UC_ViewProductList
+    usecase "Xem chi tiết sản phẩm" as UC_ViewProductDetails
+    usecase "Tìm kiếm sản phẩm" as UC_SearchProducts
+    usecase "Lọc sản phẩm theo giá" as UC_FilterByPrice
+    usecase "Lọc sản phẩm theo size" as UC_FilterBySize
+    usecase "Lọc sản phẩm theo màu sắc" as UC_FilterByColor
+    usecase "Xem sản phẩm nổi bật" as UC_ViewFeaturedProducts
+    usecase "Xem sản phẩm khuyến mãi" as UC_ViewSaleProducts
+    usecase "Liên hệ" as UC_Contact
+  }
+  
+  package "Shopping Cart" {
+    usecase "Thêm sản phẩm vào giỏ hàng" as UC_AddToCart
+    usecase "Xem giỏ hàng" as UC_ViewCart
+    usecase "Cập nhật số lượng trong giỏ" as UC_UpdateCartQuantity
+    usecase "Xóa sản phẩm khỏi giỏ" as UC_RemoveFromCart
+    usecase "Áp dụng mã giảm giá" as UC_ApplyCoupon
+    usecase "Tính toán tổng tiền" as UC_CalculateTotal
+    usecase "Chọn size và màu sắc" as UC_SelectVariants
+  }
+  
+  package "User Account Management" {
+    usecase "Đăng ký tài khoản" as UC_Register
+    usecase "Đăng nhập" as UC_Login
+    usecase "Đăng xuất" as UC_Logout
+    usecase "Quên mật khẩu" as UC_ForgotPassword
+    usecase "Đặt lại mật khẩu" as UC_ResetPassword
+    usecase "Cập nhật thông tin cá nhân" as UC_UpdateProfile
+    usecase "Thay đổi mật khẩu" as UC_ChangePassword
+    usecase "Quản lý địa chỉ giao hàng" as UC_ManageAddresses
+  }
+  
+  package "Order Process" {
+    usecase "Tiến hành thanh toán" as UC_Checkout
+    usecase "Nhập thông tin giao hàng" as UC_EnterShippingInfo
+    usecase "Chọn phương thức thanh toán" as UC_SelectPaymentMethod
+    usecase "Xác nhận đơn hàng" as UC_ConfirmOrder
+    usecase "Thanh toán online" as UC_OnlinePayment
+    usecase "Thanh toán khi nhận hàng" as UC_CODPayment
+    usecase "Xem xác nhận đơn hàng" as UC_ViewOrderConfirmation
+  }
+  
+  package "Order Management" {
+    usecase "Xem lịch sử đơn hàng" as UC_ViewOrderHistory
+    usecase "Xem chi tiết đơn hàng" as UC_ViewOrderDetails
+    usecase "Theo dõi trạng thái đơn hàng" as UC_TrackOrder
+    usecase "Hủy đơn hàng" as UC_CancelOrder
+    usecase "Đánh giá sản phẩm" as UC_ReviewProduct
+    usecase "Yêu cầu đổi trả" as UC_RequestReturn
+  }
+  
+  package "Notification & Communication" {
+    usecase "Nhận email xác nhận" as UC_ReceiveConfirmationEmail
+    usecase "Nhận thông báo trạng thái" as UC_ReceiveStatusNotification
+    usecase "Đăng ký nhận tin khuyến mãi" as UC_SubscribeNewsletter
+    usecase "Chat hỗ trợ" as UC_LiveChat
+  }
+}
+
+' Visitor relationships
+Visitor --> UC_ViewHomepage
+Visitor --> UC_BrowseCategories
+Visitor --> UC_ViewProductList
+Visitor --> UC_ViewProductDetails
+Visitor --> UC_SearchProducts
+Visitor --> UC_FilterByPrice
+Visitor --> UC_FilterBySize
+Visitor --> UC_FilterByColor
+Visitor --> UC_ViewFeaturedProducts
+Visitor --> UC_ViewSaleProducts
+Visitor --> UC_Contact
+Visitor --> UC_AddToCart
+Visitor --> UC_ViewCart
+Visitor --> UC_Register
+Visitor --> UC_Login
+
+' Customer relationships (all visitor capabilities plus more)
+Customer --> UC_ViewHomepage
+Customer --> UC_BrowseCategories
+Customer --> UC_ViewProductList
+Customer --> UC_ViewProductDetails
+Customer --> UC_SearchProducts
+Customer --> UC_AddToCart
+Customer --> UC_ViewCart
+Customer --> UC_Checkout
+Customer --> UC_ViewOrderHistory
+Customer --> UC_ViewOrderDetails
+Customer --> UC_TrackOrder
+Customer --> UC_UpdateProfile
+Customer --> UC_ManageAddresses
+Customer --> UC_Logout
+
+' Product browsing extends
+UC_BrowseCategories <|-- UC_ViewProductList : extends
+UC_ViewProductList <|-- UC_ViewProductDetails : extends
+UC_ViewHomepage <|-- UC_ViewFeaturedProducts : extends
+UC_ViewHomepage <|-- UC_ViewSaleProducts : extends
+
+' Search and filter extends
+UC_ViewProductList <|-- UC_SearchProducts : extends
+UC_ViewProductList <|-- UC_FilterByPrice : extends
+UC_ViewProductList <|-- UC_FilterBySize : extends
+UC_ViewProductList <|-- UC_FilterByColor : extends
+
+' Shopping cart extends
+UC_AddToCart ..> UC_SelectVariants : include
+UC_ViewCart <|-- UC_UpdateCartQuantity : extends
+UC_ViewCart <|-- UC_RemoveFromCart : extends
+UC_ViewCart <|-- UC_ApplyCoupon : extends
+UC_ViewCart ..> UC_CalculateTotal : include
+
+' User account extends
+UC_Register ..> UC_ReceiveConfirmationEmail : include
+UC_Login <|-- UC_ForgotPassword : extends
+UC_ForgotPassword ..> UC_ResetPassword : include
+UC_UpdateProfile <|-- UC_ChangePassword : extends
+UC_UpdateProfile <|-- UC_ManageAddresses : extends
+
+' Checkout process
+UC_Checkout ..> UC_Login : include
+UC_Checkout ..> UC_EnterShippingInfo : include
+UC_Checkout ..> UC_SelectPaymentMethod : include
+UC_Checkout ..> UC_ConfirmOrder : include
+
+UC_SelectPaymentMethod <|-- UC_OnlinePayment : extends
+UC_SelectPaymentMethod <|-- UC_CODPayment : extends
+
+UC_ConfirmOrder ..> UC_ViewOrderConfirmation : include
+UC_ConfirmOrder ..> UC_ReceiveConfirmationEmail : include
+
+' Order management extends
+UC_ViewOrderHistory <|-- UC_ViewOrderDetails : extends
+UC_ViewOrderDetails <|-- UC_TrackOrder : extends
+UC_ViewOrderDetails <|-- UC_CancelOrder : extends
+UC_ViewOrderDetails <|-- UC_ReviewProduct : extends
+UC_ViewOrderDetails <|-- UC_RequestReturn : extends
+
+' Notifications
+UC_TrackOrder ..> UC_ReceiveStatusNotification : include
+UC_ViewHomepage <|-- UC_SubscribeNewsletter : extends
+UC_Contact <|-- UC_LiveChat : extends
+
+' Prerequisites
+UC_ViewOrderHistory ..> UC_Login : requires
+UC_Checkout ..> UC_Login : requires
+UC_UpdateProfile ..> UC_Login : requires
+
+' Development status notes
+note right of UC_ViewHomepage
+  Status: 🚧 NEXT PRIORITY
+  - Landing page design
+  - Featured products showcase
+  - Category navigation
+  - Responsive design
+end note
+
+note right of UC_BrowseCategories
+  Status: 🚧 TO BE DEVELOPED
+  - Category listing
+  - Product grid/list view
+  - Pagination
+  - Breadcrumb navigation
+end note
+
+note right of UC_ViewProductDetails
+  Status: 🚧 TO BE DEVELOPED
+  - Product information display
+  - Image gallery
+  - Size/color selection
+  - Add to cart functionality
+  - Related products
+end note
+
+note right of UC_AddToCart
+  Status: 🚧 TO BE DEVELOPED
+  - Session-based cart
+  - Variant selection
+  - Quantity management
+  - Local storage backup
+end note
+
+note right of UC_Checkout
+  Status: 🚧 FUTURE FEATURE
+  - Multi-step checkout
+  - Guest checkout option
+  - Payment integration
+  - Order confirmation
+end note
+
+note right of UC_Register
+  Status: 🚧 FUTURE FEATURE
+  - User registration system
+  - Email verification
+  - Profile management
+  - Address book
+end note
+
+@enduml

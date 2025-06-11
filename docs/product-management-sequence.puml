@@ -1,0 +1,108 @@
+@startuml SellCloth-Product-Management-Sequence
+!theme plain
+title Sequence Diagram - Product Management Workflow
+
+actor "Admin" as Admin
+participant "Browser" as Browser
+participant "Filament\nProductResource" as ProductResource
+participant "Product\nModel" as ProductModel
+participant "Category\nModel" as CategoryModel
+participant "Database" as DB
+
+== Xem danh sách sản phẩm ==
+Admin -> Browser: Click "Sản phẩm"
+Browser -> ProductResource: GET /admin/products
+ProductResource -> ProductModel: Product::with('category')->get()
+ProductModel -> DB: SELECT products.*, categories.name
+DB -> ProductModel: Return product data
+ProductModel -> ProductResource: Product collection
+ProductResource -> Browser: Render products table
+Browser -> Admin: Hiển thị danh sách sản phẩm
+
+note right of ProductResource
+  Table features:
+  - Vietnamese labels
+  - Category relationships
+  - Stock status badges
+  - Price formatting (VND)
+  - Filters by category/status
+end note
+
+== Tạo sản phẩm mới ==
+Admin -> Browser: Click "Tạo mới"
+Browser -> ProductResource: GET /admin/products/create
+ProductResource -> CategoryModel: Category::where('is_active', true)->get()
+CategoryModel -> DB: SELECT * FROM categories
+DB -> CategoryModel: Return active categories
+CategoryModel -> ProductResource: Category options
+ProductResource -> Browser: Render create form
+Browser -> Admin: Hiển thị form tạo sản phẩm
+
+Admin -> Browser: Điền thông tin sản phẩm
+note right of Admin
+  Form data:
+  - Tên sản phẩm (Vietnamese)
+  - Slug (auto-generated)
+  - Mô tả
+  - Giá / Giá khuyến mãi
+  - Tồn kho
+  - Sizes (JSON array)
+  - Colors (JSON array)
+  - Danh mục
+  - Trạng thái
+end note
+
+Browser -> ProductResource: POST /admin/products
+ProductResource -> ProductResource: Validate form data
+ProductResource -> ProductModel: Product::create($validatedData)
+ProductModel -> DB: INSERT INTO products
+DB -> ProductModel: Return created product
+ProductModel -> ProductResource: New product instance
+ProductResource -> Browser: 302 Redirect to products list
+Browser -> Admin: Hiển thị thông báo thành công
+
+== Chỉnh sửa sản phẩm ==
+Admin -> Browser: Click "Sửa" trên sản phẩm
+Browser -> ProductResource: GET /admin/products/{id}/edit
+ProductResource -> ProductModel: Product::with('category')->find($id)
+ProductModel -> DB: SELECT product with category
+DB -> ProductModel: Return product data
+ProductModel -> ProductResource: Product with relationships
+ProductResource -> CategoryModel: Get categories for dropdown
+CategoryModel -> ProductResource: Category options
+ProductResource -> Browser: Render edit form với dữ liệu
+Browser -> Admin: Hiển thị form sửa đã điền sẵn
+
+Admin -> Browser: Cập nhật thông tin
+Browser -> ProductResource: PUT /admin/products/{id}
+ProductResource -> ProductResource: Validate updated data
+ProductResource -> ProductModel: Product::find($id)->update($data)
+ProductModel -> DB: UPDATE products SET ...
+DB -> ProductModel: Confirm update
+ProductModel -> ProductResource: Updated product
+ProductResource -> Browser: 302 Redirect với success message
+Browser -> Admin: Hiển thị thông báo cập nhật thành công
+
+== Xóa sản phẩm ==
+Admin -> Browser: Click "Xóa" trên sản phẩm
+Browser -> ProductResource: Hiển thị confirm dialog
+Admin -> Browser: Xác nhận xóa
+Browser -> ProductResource: DELETE /admin/products/{id}
+ProductResource -> ProductModel: Product::find($id)->delete()
+ProductModel -> DB: DELETE FROM products WHERE id = ?
+DB -> ProductModel: Confirm deletion
+ProductModel -> ProductResource: Deletion successful
+ProductResource -> Browser: Refresh table với success message
+Browser -> Admin: Sản phẩm đã bị xóa khỏi danh sách
+
+note right of ProductResource
+  Filament Features Used:
+  ✅ Auto-generated CRUD
+  ✅ Form validation
+  ✅ Relationship handling
+  ✅ JSON field casting
+  ✅ Vietnamese interface
+  ✅ Success notifications
+end note
+
+@enduml
